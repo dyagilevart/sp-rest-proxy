@@ -41,11 +41,15 @@ export class PostRouter extends BasicRouter {
           requestHeadersPass['X-HTTP-Method'] = req.headers[prop];
         }
       });
-      this.util.getAuthOptions()
-        .then(opt => {
+      Promise.all([
+        this.util.getAuthOptions(),
+        this.spr.requestDigest((endpointUrl).split('/_vti_bin')[0])
+      ])
+        .then(r => {
           const headers = {
-            ...opt.headers,
-            ...requestHeadersPass
+            ...r[0].headers,
+            ...requestHeadersPass,
+            'X-RequestDigest': r[1]
           };
           const options: any = {
             json: false,
@@ -53,8 +57,8 @@ export class PostRouter extends BasicRouter {
           };
           return this.spr.post(endpointUrl, { headers, body, ...options, agent });
         })
-          .then(r => this.transmitResponse(res, r))
-          .catch(err => this.transmitError(res, err));
+        .then(r => this.transmitResponse(res, r))
+        .catch(err => this.transmitError(res, err));
     });
   }
 
